@@ -216,16 +216,20 @@ void init_purple(struct IRISData *info, char *config_dir) {
 
 	/* Load the preferences. */
 	purple_prefs_load();
+
 	// ? #define PLUGIN_SAVE_PREF "/finch/plugins/loaded"
 	//purple_plugins_load_saved(PLUGIN_SAVE_PREF);
 
 	/* Load the pounces. */
-	purple_pounces_load();
+	//purple_pounces_load();
 
 	/** Account Login **/
 	/* XYZZY - Load from config */
 	info->prplAccount = purple_account_new("utopianet", "prpl-bonjour");
 	purple_account_set_user_info(info->prplAccount, "Local Network Status Daemon");
+	purple_account_set_alias(info->prplAccount, "UtopiaNet");
+
+	purple_account_set_status(info->prplAccount, "Available", TRUE, NULL);
     
 	/* It's necessary to enable the account first. */
 	purple_account_set_enabled(info->prplAccount, PRPL_ID, TRUE);
@@ -233,4 +237,10 @@ void init_purple(struct IRISData *info, char *config_dir) {
 	/* Now, to connect the account(s), create a status and activate it. */
 	status = purple_savedstatus_new(NULL, PURPLE_STATUS_AVAILABLE);
 	purple_savedstatus_activate(status);
+}
+
+void close_purple(struct IRISData *info)
+{
+	// XYZZY - needed?
+	purple_core_quit();
 }

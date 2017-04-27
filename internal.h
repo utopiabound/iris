@@ -23,15 +23,17 @@
  */
 struct IRISData {
     PurpleAccount	*prplAccount;	/* Purple R/O */
+
     GDBusNodeInfo	*introspect;	/* GDBus R/O */
     guint		gdbusID;	/* GDBus R/O */
+
     guint		verbosity;	/* Main R/O */
-    
+    GMainLoop		*loop;		/* Main R/O */
 };
 
 /**** purple.c ****/
 void init_purple(struct IRISData *, char *config_dir);
-
+void close_purple(struct IRISData *);
 
 /*** gdbus.c ****/
 void init_gdbus(struct IRISData *);

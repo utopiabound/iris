@@ -17,6 +17,8 @@ static const gchar introspection_xml[] =
   "    <method name='ListAll'>"
   "      <arg type='as' name='message' direction='out'/>"
   "    </method>"
+  "    <method name='Quit'>"
+  "    </method>"
   "    <property type='s' name='Version' access='read'/>"
   "  </interface>"
   "</node>";
@@ -30,6 +32,12 @@ void handle_method_call(GDBusConnection       *connection,
 			GDBusMethodInvocation *invocation,
 			gpointer               user_data)
 {
+	struct IRISData *info = user_data;
+
+	g_message("%s:%s call %s %s.%s(%s)\n",__func__,
+		  sender, object_path, interface_name, method_name,
+		  g_variant_get_type_string(parameters));
+
 	if (g_strcmp0(method_name, "TellAll") == 0) {
 		const gchar* msg;
 		GVariant *sub;
@@ -43,10 +51,13 @@ void handle_method_call(GDBusConnection       *connection,
 	} else if (g_strcmp0(method_name, "ListAll") == 0) {
 		GVariant *ret = NULL;
 
-		g_message("%s:%s call %s %s.%s\n",__func__,
-			  sender, object_path, interface_name, method_name);
-
 		g_dbus_method_invocation_return_value(invocation, ret);
+
+	} else if (g_strcmp0(method_name, "Quit") == 0) {
+		g_dbus_method_invocation_return_value(invocation, NULL);
+
+		if (g_main_loop_is_running(info->loop))
+			g_main_loop_quit(info->loop);
 	}
 }
 

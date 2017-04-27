@@ -25,7 +25,6 @@ int main(int argc, char *argv[])
 {
 	int opt;
 	char *opt_config_dir_arg = NULL;
-	GMainLoop *loop;
 	struct IRISData info = { .verbosity = DEFAULT_VERBOSITY };
 	
 	/*
@@ -80,13 +79,15 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	info.loop = g_main_loop_new(NULL, FALSE);
+
 	init_purple(&info, opt_config_dir_arg);
 	init_gdbus(&info);
 	
 	// Start Loop
-	loop = g_main_loop_new(NULL, FALSE);
-	g_main_loop_run(loop);
+	g_main_loop_run(info.loop);
 
+	close_purple(&info);
 	close_gdbus(&info);
 	return 0;
 }
