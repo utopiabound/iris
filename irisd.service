@@ -1,0 +1,13 @@
+[Unit]
+Description=IRIS Bonjour Messenger
+After=dbus.service
+After=avahi-daemon.service
+Wants=network-online.target
+After=network.target network-online.target
+
+[Service]
+ExecStart=/usr/bin/irisd
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
