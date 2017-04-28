@@ -186,6 +186,16 @@ on_name_lost (GDBusConnection *connection,
 	g_message("Lost the name %s on the session bus\n", name);
 }
 
+static void log_dummy(const gchar *log_domain,
+                     GLogLevelFlags log_level,
+                     const gchar *message,
+                     gpointer user_data )
+
+{
+	/* Dummy does nothing */
+	return;
+}
+
 void init_gdbus(struct IRISData *info) {
 	GBusNameOwnerFlags flags = G_BUS_NAME_OWNER_FLAGS_NONE;
 
@@ -216,7 +226,7 @@ void init_gdbus(struct IRISData *info) {
 	 * +1			INFO and above
 	 * +2			DEBUG and above
 	 */
-	g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_MASK, NULL, NULL);
+	g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_MASK, log_dummy, NULL);
 	if (info->verbosity > DEFAULT_VERBOSITY)
 		g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_INFO, g_log_default_handler, NULL);
 
