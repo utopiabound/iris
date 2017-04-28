@@ -5,6 +5,8 @@ all:: iris
 
 iris: iris.o purple.o gdbus.o
 
+test:: iris
+	./iris -c config -dd
 
 clean::
 	rm -f *.o iris *~ core.*

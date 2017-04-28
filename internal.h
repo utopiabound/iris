@@ -1,3 +1,8 @@
+/***
+ * -*- linux-c  -*-
+ * Copyright 2017 Nathaniel Clark <Nathaniel.Clark@misrule.us>
+ * All Rights Reserved
+ */
 #ifndef _INTERNAL_H_
 #define _INTERNAL_H_
 
@@ -34,6 +39,8 @@ struct IRISData {
 /**** purple.c ****/
 void init_purple(struct IRISData *, char *config_dir);
 void close_purple(struct IRISData *);
+
+void iris_send_message(PurpleBuddy *, const gchar *);
 
 /*** gdbus.c ****/
 void init_gdbus(struct IRISData *);

@@ -1,7 +1,7 @@
-/**
- * -*- linux-c-mode -*-
- *
- *
+/***
+ * -*- linux-c  -*-
+ * Copyright 2017 Nathaniel Clark <Nathaniel.Clark@misrule.us>
+ * All Rights Reserved
  */
 
 #define _GNU_SOURCE

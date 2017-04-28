@@ -1,6 +1,7 @@
-/**
- * -*-   -*-
- *
+/***
+ * -*- linux-c  -*-
+ * Copyright 2017 Nathaniel Clark <Nathaniel.Clark@misrule.us>
+ * All Rights Reserved
  */
 
 #include "internal.h"
@@ -23,7 +24,25 @@ static const gchar introspection_xml[] =
   "  </interface>"
   "</node>";
 
-void handle_method_call(GDBusConnection       *connection,
+static void listall(gpointer data, gpointer user_data)
+{
+	PurpleBuddy *buddy = data;
+	GVariantBuilder *builder = user_data;
+	gchar buf[30];
+
+	g_snprintf(buf, sizeof(buf), "%s (%s)",
+		  buddy->name,
+		  buddy->server_alias);
+
+	g_variant_builder_add(builder, "s", buf);
+}
+static void sendeach(gpointer data, gpointer user_data) {
+	PurpleBuddy *buddy = data;
+	const gchar *msg = user_data;
+	iris_send_message(buddy, msg);
+}
+
+static void handle_method_call(GDBusConnection       *connection,
 			const gchar           *sender,
 			const gchar           *object_path,
 			const gchar           *interface_name,
@@ -33,8 +52,9 @@ void handle_method_call(GDBusConnection       *connection,
 			gpointer               user_data)
 {
 	struct IRISData *info = user_data;
+	GSList *list;
 
-	g_message("%s:%s call %s %s.%s(%s)\n",__func__,
+	g_debug("%s:%s call %s %s.%s(%s)\n",__func__,
 		  sender, object_path, interface_name, method_name,
 		  g_variant_get_type_string(parameters));
 
@@ -43,13 +63,39 @@ void handle_method_call(GDBusConnection       *connection,
 		GVariant *sub;
 		sub = g_variant_get_child_value(parameters, 0);
 		msg = g_variant_get_string(sub, NULL);
-		
-		g_message("Will Tell World: %s", msg);	
+
+		g_debug("Will Tell World: %s", msg);
+
+		// list all buddies
+		list = purple_find_buddies(info->prplAccount, NULL);
+		if (list != NULL) {
+			g_slist_foreach(list, sendeach, (gpointer)msg);
+			g_slist_free(list);
+		}
+
 		g_dbus_method_invocation_return_value(invocation, NULL);
 		g_variant_unref(sub);
-	
+
 	} else if (g_strcmp0(method_name, "ListAll") == 0) {
 		GVariant *ret = NULL;
+		GVariantBuilder builder;
+
+		// list all buddies
+		list = purple_find_buddies(info->prplAccount, NULL);
+		if (list != NULL) {
+			g_variant_builder_init(&builder, G_VARIANT_TYPE("as"));
+
+			g_slist_foreach(list, listall, &builder);
+
+			ret = g_variant_builder_end(&builder);
+
+			g_slist_free(list);
+		}
+
+		// Encase string array in tuple
+		g_variant_builder_init(&builder, G_VARIANT_TYPE("(as)"));
+		g_variant_builder_add(&builder, "@as", ret);
+		ret = g_variant_builder_end(&builder);
 
 		g_dbus_method_invocation_return_value(invocation, ret);
 
@@ -70,23 +116,23 @@ GVariant *handle_get_property (GDBusConnection       *connection,
 			       gpointer               user_data)
 {
 	GVariant *ret = NULL;
-	g_message("%s:%s get %s %s.%s\n",__func__,
+	g_debug("%s:%s get %s %s.%s\n",__func__,
 		  sender, object_path, interface_name, property_name);
 	if (g_strcmp0(property_name, "Version") == 0)
 		ret = g_variant_new_string(VERSION_STR);
-	
+
 	return ret;
 }
 
 static gboolean
 handle_set_property (GDBusConnection  *connection,
-                     const gchar      *sender,
-                     const gchar      *object_path,
-                     const gchar      *interface_name,
-                     const gchar      *property_name,
-                     GVariant         *value,
-                     GError          **error,
-                     gpointer          user_data)
+		     const gchar      *sender,
+		     const gchar      *object_path,
+		     const gchar      *interface_name,
+		     const gchar      *property_name,
+		     GVariant         *value,
+		     GError          **error,
+		     gpointer          user_data)
 {
 	// NO WRITABLE PROPERTIES
 	g_error("Trying to set %s %s.%s, but should be read-only\n",
@@ -106,13 +152,13 @@ static const GDBusInterfaceVTable interface_vtable =
 /* Bus Call-backs */
 static void
 on_bus_acquired (GDBusConnection *connection,
-                 const gchar     *name,
-                 gpointer         user_data)
+		 const gchar     *name,
+		 gpointer         user_data)
 {
 	guint registration_id;
 	struct IRISData *info = user_data;
 
-	g_message("%s:Bus Acquired %s\n",__func__, name);
+	g_debug("%s:Bus Acquired %s\n",__func__, name);
 
 	registration_id = g_dbus_connection_register_object(connection,
 		"/",
@@ -126,27 +172,27 @@ on_bus_acquired (GDBusConnection *connection,
 
 static void
 on_name_acquired (GDBusConnection *connection,
-                  const gchar     *name,
-                  gpointer         user_data)
+		  const gchar     *name,
+		  gpointer         user_data)
 {
-	g_message("Acquired the name %s on the session bus\n", name);
+	g_debug("Acquired the name %s on the session bus\n", name);
 }
 
 static void
 on_name_lost (GDBusConnection *connection,
-              const gchar     *name,
-              gpointer         user_data)
+	      const gchar     *name,
+	      gpointer         user_data)
 {
 	g_message("Lost the name %s on the session bus\n", name);
 }
 
 void init_gdbus(struct IRISData *info) {
 	GBusNameOwnerFlags flags = G_BUS_NAME_OWNER_FLAGS_NONE;
-	
+
 	/*
 	gboolean opt_replace;
 	gboolean opt_allow_replacement;
-	
+
 	if (opt_replace)
 		flags |= G_BUS_NAME_OWNER_FLAGS_REPLACE;
 	if (opt_allow_replacement)
@@ -162,8 +208,26 @@ void init_gdbus(struct IRISData *info) {
 					on_name_lost,
 					info,
 					NULL);
-}
 
+	/* setup debug/logging
+	 *  (relative to DEFAULT_VERBOSITY)
+	 * -1 (or less)		Only WARN and CRIT
+	 * ==			Default MASK
+	 * +1			INFO and above
+	 * +2			DEBUG and above
+	 */
+	g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_MASK, NULL, NULL);
+	if (info->verbosity > DEFAULT_VERBOSITY)
+		g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_INFO, g_log_default_handler, NULL);
+
+	else if (info->verbosity > DEFAULT_VERBOSITY+1)
+		g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, g_log_default_handler, NULL);
+
+	else if (info->verbosity < DEFAULT_VERBOSITY)
+		g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING|G_LOG_LEVEL_CRITICAL, g_log_default_handler, NULL);
+	else
+		g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_MASK, g_log_default_handler, NULL);
+}
 
 void close_gdbus(struct IRISData *info) {
 	g_bus_unown_name(info->gdbusID);
