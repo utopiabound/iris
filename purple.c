@@ -207,8 +207,9 @@ void iris_send_message(PurpleBuddy *buddy, const gchar *msg)
 }
 
 void init_purple(struct IRISData *info, char *config_dir) {
-	char *path;
+	gchar *path, *chr;
 	PurpleSavedStatus *status;
+	gchar buf[30];
 
 	/* set a user-specified config directory */
 	if (config_dir != NULL) {
@@ -228,17 +229,19 @@ void init_purple(struct IRISData *info, char *config_dir) {
 	}
 
 	/* We don't want debug-messages to show up and corrupt the display */
-	purple_debug_set_enabled((info->verbosity > DEFAULT_VERBOSITY));
+	purple_debug_set_enabled((info->flags | IRIS_FLAG_DEBUG));
 
 	purple_core_set_ui_ops(&null_core_uiops);
 
-	/* Set the uiops for the eventloop. If your client is glib-based, you can safely
-	 * copy this verbatim. */
+	/* Set the uiops for the eventloop. If your client is
+	 * glib-based, you can safely copy this verbatim. */
 	purple_eventloop_set_ui_ops(&glib_eventloops);
 
-	/* Now that all the essential stuff has been set, let's try to init the core. It's
-	 * necessary to provide a non-NULL name for the current ui to the core. This name
-	 * is used by stuff that depends on this ui, for example the ui-specific plugins. */
+	/* Now that all the essential stuff has been set, let's try to
+	 * init the core. It's necessary to provide a non-NULL name
+	 * for the current ui to the core. This name is used by stuff
+	 * that depends on this ui, for example the ui-specific
+	 * plugins. */
 	if (!purple_core_init(PRPL_ID)) {
 		/* Initializing the core failed. Terminate. */
 		fprintf(stderr,
@@ -262,13 +265,20 @@ void init_purple(struct IRISData *info, char *config_dir) {
 	/** Account Login **/
 	/* XYZZY - Load from config */
 	info->prplAccount = purple_account_new("utopianet", "prpl-bonjour");
-	purple_account_set_user_info(info->prplAccount, "Local Network Status Daemon");
+	purple_account_set_user_info(info->prplAccount,
+				     "Local Network Status Daemon");
+
+	/* Set "Name" */
+	gethostname(buf, sizeof(buf));
+	chr = strchr(buf, '.');
+	if (chr != NULL)
+		*chr = '\0';
+	g_debug("Using hostname: %s\n", buf);
+	purple_account_set_string(info->prplAccount, "first", buf);
+	purple_account_set_string(info->prplAccount, "last", "IRIS Messanger");
 
 	/* It's necessary to enable the account first. */
 	purple_account_set_enabled(info->prplAccount, PRPL_ID, TRUE);
-
-	/* Things to be set after enabled */
-	purple_account_set_public_alias(info->prplAccount, "UtopiaNet", NULL, NULL);
 
 	/* Now, to connect the account(s), create a status and activate it. */
 	status = purple_savedstatus_new(NULL, PURPLE_STATUS_AVAILABLE);

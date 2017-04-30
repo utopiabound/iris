@@ -11,7 +11,7 @@
 /* Introspection data for the service we are exporting */
 static const gchar introspection_xml[] =
   "<node>"
-  "  <interface name='net.utopiabound.dbus.iris'>"
+  "  <interface name='net.utopiabound.iris'>"
   "    <method name='TellAll'>"
   "      <arg type='s' name='message' direction='in'/>"
   "    </method>"
@@ -158,7 +158,9 @@ on_bus_acquired (GDBusConnection *connection,
 	guint registration_id;
 	struct IRISData *info = user_data;
 
-	g_debug("%s:Bus Acquired %s\n",__func__, name);
+	g_debug("%s:%s Bus Acquired %s\n",__func__,
+		(info->flags & IRIS_FLAG_SYSTEM) ?"system" :"session",
+		name);
 
 	registration_id = g_dbus_connection_register_object(connection,
 		"/",
@@ -175,7 +177,10 @@ on_name_acquired (GDBusConnection *connection,
 		  const gchar     *name,
 		  gpointer         user_data)
 {
-	g_debug("Acquired the name %s on the session bus\n", name);
+	struct IRISData *info = user_data;
+
+	g_debug("Acquired the name %s on the %s bus\n", name,
+		(info->flags & IRIS_FLAG_SYSTEM) ?"system" :"session");
 }
 
 static void
@@ -183,17 +188,12 @@ on_name_lost (GDBusConnection *connection,
 	      const gchar     *name,
 	      gpointer         user_data)
 {
-	g_message("Lost the name %s on the session bus\n", name);
-}
+	struct IRISData *info = user_data;
 
-static void log_dummy(const gchar *log_domain,
-                     GLogLevelFlags log_level,
-                     const gchar *message,
-                     gpointer user_data )
-
-{
-	/* Dummy does nothing */
-	return;
+	g_message("Lost the name %s on the %s bus\n", name,
+		  (info->flags & IRIS_FLAG_SYSTEM) ?"system" :"session");
+	if (g_main_loop_is_running(info->loop))
+	    g_main_loop_quit(info->loop);
 }
 
 void init_gdbus(struct IRISData *info) {
@@ -210,33 +210,16 @@ void init_gdbus(struct IRISData *info) {
 	*/
 	info->introspect = g_dbus_node_info_new_for_xml(introspection_xml, NULL);
 
-	info->gdbusID = g_bus_own_name (G_BUS_TYPE_SESSION,
-					DBUS_NAME,
-					flags,
-					on_bus_acquired,
-					on_name_acquired,
-					on_name_lost,
-					info,
-					NULL);
-
-	/* setup debug/logging
-	 *  (relative to DEFAULT_VERBOSITY)
-	 * -1 (or less)		Only WARN and CRIT
-	 * ==			Default MASK
-	 * +1			INFO and above
-	 * +2			DEBUG and above
-	 */
-	g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_MASK, log_dummy, NULL);
-	if (info->verbosity > DEFAULT_VERBOSITY)
-		g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_INFO, g_log_default_handler, NULL);
-
-	else if (info->verbosity > DEFAULT_VERBOSITY+1)
-		g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_DEBUG, g_log_default_handler, NULL);
-
-	else if (info->verbosity < DEFAULT_VERBOSITY)
-		g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_WARNING|G_LOG_LEVEL_CRITICAL, g_log_default_handler, NULL);
-	else
-		g_log_set_handler(G_LOG_DOMAIN, G_LOG_LEVEL_MASK, g_log_default_handler, NULL);
+	info->gdbusID = g_bus_own_name((info->flags & IRIS_FLAG_SYSTEM)
+				       ?G_BUS_TYPE_SYSTEM
+				       :G_BUS_TYPE_SESSION,
+				       DBUS_NAME,
+				       flags,
+				       on_bus_acquired,
+				       on_name_acquired,
+				       on_name_lost,
+				       info,
+				       NULL);
 }
 
 void close_gdbus(struct IRISData *info) {

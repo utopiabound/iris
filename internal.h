@@ -13,27 +13,32 @@
 #include <purple.h>
 
 
-#define PROG_NAME "iris"
+#define PROG_NAME "irisd"
 
 #define PRPL_ID "x-"PROG_NAME
 
-#define DBUS_NAME "net.utopiabound."PROG_NAME
+#define DBUS_NAME "net.utopiabound.iris"
 
 #define VERSION_STR "0.0.1"
-#define DEFAULT_VERBOSITY 1
+
+enum IRISDataFlags {
+	IRIS_FLAG_NONE=0,
+	IRIS_FLAG_DEBUG=	0x01,	/**< Enable Debugging */
+	IRIS_FLAG_SYSTEM=	0x10,	/**< GDBus connect to system D-Bus */
+};
 
 /**
- *
+ * Central info repository that is passed around.
  * All "R/O" data is set during init
  */
 struct IRISData {
-    PurpleAccount	*prplAccount;	/* Purple R/O */
+	PurpleAccount	*prplAccount;	/* Purple R/O */
 
-    GDBusNodeInfo	*introspect;	/* GDBus R/O */
-    guint		gdbusID;	/* GDBus R/O */
+	GDBusNodeInfo	*introspect;	/* GDBus R/O */
+	guint		gdbusID;	/* GDBus R/O */
 
-    guint		verbosity;	/* Main R/O */
-    GMainLoop		*loop;		/* Main R/O */
+	GMainLoop	*loop;		/* Main R/O */
+	guint		flags;		/* Main R/O */
 };
 
 /**** purple.c ****/

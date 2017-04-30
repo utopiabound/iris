@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# Startup script for IRIS
+#
+# chkconfig: 35 90 10
+# description: IRIS Messager
+#
+### BEGIN INIT INFO
+# Provides: irisd
+# Required-Start: messagebus
+# Required-Stop: messagebus
+# Should-Start: $network
+# Should-Stop: $network
+# Default-Start: 3 5
+# Default-Stop: 0 1 2 6
+# Short-Description: IRIS Message Deliverer
+# Description: Starts the IRIS daemon.
+### END INIT INFO
+
+# Replace with users you want to run syncthing clients for
+STUSER=iris
+DAEMON=/usr/sbin/irisd
+DAEMON_BASENAME="irisd"
+CONFIGDIR="/var/lib/iris"
+OPTS="-c $CONFIGDIR"
+
+. /etc/init.d/functions
+
+start() {
+    echo -n "Starting IRIS"
+    daemon daemonize -c $CONFIGDIR -e $LOGDIR/syncthing.err -o $LOGDIR/syncthing.log -u $STUSER $DAEMON $OPTS
+    echo
+}
+
+stop() {
+    echo -n "Stopping IRIS"
+    killproc $DAEMON
+    echo
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart|reload|force-reload)
+        stop && start
+        ;;
+    status)
+        status $DAEMON_BASENAME
+        ;;
+    *)
+        echo "Usage: /etc/init.d/iris {start|stop|reload|force-reload|restart|status}"
+        exit 1
+        ;;
+esac
+
+exit 0
