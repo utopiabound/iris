@@ -3,7 +3,7 @@ Version:        0.0.1
 Release:        1
 Summary:        IRIS messanging daemon
 URL:            https://github.org/utopiabound/iris
-Source:         https://www.fvwm.org/generated/icon_download/fvwm_icons.tar.bz2
+Source:         %{name}-%{version}.tar.bz2
 License:        GPL?
 BuildRequires:	glib2-devel
 BuildRequires:	libpurple-devel
@@ -26,13 +26,13 @@ IRIS Messanging deamon listens on system dbus, and will send
 notifications to all Bonjour iChat clients.
 
 %prep
-%{setup}
+%setup
 
 %build
-%{make_build}
+%make_build
 
 %install
-%{make_install}
+%make_install
 
 %clean
 rm -rf %{buildroot}
@@ -73,9 +73,10 @@ useradd -M -r -d %{_sharedstatedir}/iris iris
 
 %files
 %defattr(-,root,root)
+%doc README.md
 %{_bindir}/*
 %{_sbindir}/*
-%{_unitdir}/*
+%{_sysconfdir}/dbus-1/*
 %if 0%{?fedora} >= 20 || 0%{?rhel} >= 7 || 0%{?suse_version} >= 1210
 %{_unitdir}/*
 %else

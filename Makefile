@@ -1,5 +1,7 @@
 CFLAGS=$(shell pkg-config --cflags gio-2.0 purple) -g -Wall
 LDFLAGS+=$(shell pkg-config --libs gio-2.0 purple)
+VERSION=$(shell git describe)
+TARBALL=iris-${VERSION}.tar.bz2
 
 all:: irisd
 
@@ -21,5 +23,18 @@ install:
 		install -D iris.initd ${DESTDIR}/etc/init.d/irisd; \
 	fi
 
-clean::
-	rm -f *.o iris irisd *~ core.*
+dist:
+	mkdir dist
+
+dist/${TARBALL}: dist
+	git archive --prefix iris-${VERSION}/ --format tar.bz2 -o dist/${TARBALL} ${VERSION}
+
+rpm: dist/${TARBALL} iris.spec
+	cp -f ${TARBALL} $(shell rpmbuild -E '%{_sourcedir}')/
+	rpmbuild -bb iris.spec
+	mv $(shell rpmbuild -E '%{_rpmdir}')/$(shell uname -m)/iris-*${VERSION}*.rpm dist/
+
+clean:
+	rm -f *.o iris irisd *~ core.* iris*bz2
+
+.PHONEY: rpm clean test all
